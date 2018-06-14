@@ -123,10 +123,33 @@ panic(char *s)
     ;
 }
 
-//PAGEBREAK: 50
+#define SHELL 0
+#define MEMO 1
+#define DELETE 0xE9
 #define BACKSPACE 0x100
 #define CRTPORT 0x3d4
+#define PGEND 0xe1
+#define PGUP 0xe6
+#define PGDN 0xe7
+#define SECTAG 0xcc
+#define PTHTAG 0xbb
+//PAGEBREAK: 50
+#define KEY_HOME        0xE0
+#define KEY_END         0xE1
+#define KEY_UP          0xE2
+#define KEY_DN          0xE3
+#define KEY_LF          0xE4
+#define KEY_RT          0xE5
+#define KEY_PGUP        0xE6
+#define KEY_PGDN        0xE7
+#define KEY_INS         0xE8
+#define KEY_DEL         0xE9
+
+#define ESC             0x1B
+
 static ushort *crt = (ushort*)P2V(0xb8000);  // CGA memory
+
+#define INPUT_BUF 128
 
 static void
 cgaputc(int c)
@@ -212,6 +235,24 @@ consoleintr(int (*getc)(void))
         input.e--;
         consputc(BACKSPACE);
       }
+      break;
+    case C('L'):
+      memset(crt,0,24*80*sizeof(ushort));
+      outb(CRTPORT, 14);
+      outb(CRTPORT+1, 0);
+      outb(CRTPORT, 15);
+      outb(CRTPORT+1, 0);
+      cgaputc('X');
+      cgaputc('V');
+      cgaputc('6');
+      cgaputc(':');
+      break;
+    case C('J'):
+      input.buf[input.e++ % INPUT_BUF] = c;
+      consputc(c);
+      input.w = input.e;
+      cgaputc('\n');
+      wakeup(&input.r);
       break;
     default:
       if(c != 0 && input.e-input.r < INPUT_BUF){
